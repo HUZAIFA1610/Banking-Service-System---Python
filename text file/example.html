@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>example.html</title>
+        <style type="text/css">
+          .end-element { fill : #FFCCFF; }
+        </style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.17.1/flowchart.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.1/js/bootstrap.bundle.min.js"></script>
+        <!-- <script src="../release/flowchart.min.js"></script> -->
+        <script>
+
+            window.onload = function () {
+                var btn = document.getElementById("run"),
+                    cd = document.getElementById("code"),
+                    chart;
+                    
+                (btn.onclick = function () {
+                    var code = cd.value;
+
+                    if (chart) {
+                      chart.clean();
+                    }
+
+                    chart = flowchart.parse(code);
+                    chart.drawSVG('canvas', {
+                      'x': 0,
+                      'y': 0,
+                      'line-width': 3,
+                      //'maxWidth': 15,//ensures the flowcharts fits within a certain width
+                      'line-length': 50,
+                      'text-margin': 10,
+                      'font-size': 14,
+                      'font': 'normal',
+                      'font-family': 'Helvetica',
+                      'font-weight': 'normal',
+                      'font-color': 'black',
+                      'line-color': 'black',
+                      'element-color': 'black',
+                      'fill': 'white',
+                      'yes-text': 'yes',
+                      'no-text': 'no',
+                      'arrow-end': 'block',
+                      'scale': 1,
+                      'symbols': {
+                        'start': {
+                          'font-size': 14,
+                          'font-color': 'yellow',
+                          'element-color': 'blue',
+                          'fill': 'green',
+                          'class': 'start-element'
+                        },
+                        'inputoutput': {
+                          'font-color': 'black',
+                          'element-color': 'black',
+                          'fill': 'bisque'
+                        },
+                        'operation': {
+                          'font-color': 'black',
+                          'element-color': 'black',
+                          'fill': 'linen'
+                        },
+                        'subroutine': {
+                          'font-color': 'black',
+                          'element-color': 'blue',
+                          'fill': 'lightgreen'
+                        },
+                        'condition': {
+                          'font-color': 'red',
+                          'element-color': 'black',
+                          'fill': 'yellow'
+                        },
+                        'end':{
+                          'font-size': 20,
+                          'class': 'end-element'
+                        }
+                      },
+                      'flowstate' : {
+                        //'past' : { 'fill' : '#CCCCCC', 'font-size' : 12},
+                        //'current' : {'fill' : 'yellow', 'font-color' : 'red', 'font-weight' : 'bold'},
+                        //'future' : { 'fill' : '#FFFF99'},
+                        'request' : { 'fill' : 'blue'},
+                        'invalid': {'fill' : '#444444'},
+                        'approved' : { 'fill' : '#58C4A3', 'font-size' : 12, 'yes-text' : 'APPROVED', 'no-text' : 'n/a' },
+                        'rejected' : { 'fill' : '#C45879', 'font-size' : 12, 'yes-text' : 'n/a', 'no-text' : 'REJECTED' }
+                      }
+                    });
+                    //create base64 encoding of SVG to generate download link for title(without html or htm).SVG
+                    var currentCanvasDIV = document.getElementById('canvas')
+                    var currentDrawSVG = currentCanvasDIV.innerHTML.replaceAll('ë','e');
+
+                    const OUTsvgBASE64 = btoa(currentDrawSVG)
+                    doctitle = document.title.replace('.html','');
+                    doctitle = doctitle.replace('.htm','');
+
+
+                    var currentCanvasDIV = document.getElementById('canvas')
+                    var currentDrawSVG = currentCanvasDIV.innerHTML.replaceAll('ë','e');
+                    svgSource = currentDrawSVG
+                    svgXML = currentDrawSVG;
+                    // Use SVG Height and Width from the SVG XML to set canvas size
+                    svgXMLsubstringHeight = svgXML.substring(svgXML.indexOf('height='), svgXML.indexOf('version='));
+                    svgXMLsubstringWidth = svgXML.substring(svgXML.indexOf('width='), svgXML.indexOf('xmlns='));
+                    HeightValue = svgXMLsubstringHeight.substring(svgXMLsubstringHeight.indexOf('"')+1,svgXMLsubstringHeight.lastIndexOf('"'));
+                    WidthValue = svgXMLsubstringWidth.substring(svgXMLsubstringWidth.indexOf('"')+1,svgXMLsubstringWidth.lastIndexOf('"'));
+                    HeightValueInt = Math.round(HeightValue)
+                    WidthValueInt = Math.round(WidthValue)
+                    // setup input for base64SvgToBase64Png
+                    let svgSrc = "data:image/svg+xml;base64,"+OUTsvgBASE64;
+                    var pngBase
+                    imageUtil.base64SvgToBase64Png(svgSrc, WidthValueInt, HeightValueInt).then(pngSrc => {
+                    pngBase = pngSrc
+                    // output download link for base64 PNG converted on download from base64
+                    var pngOutHtml = `<a href="${pngBase}" download="${doctitle}.png">PNG - Click here to download current rendered flowchart as ${doctitle}.png</a>`
+                    document.getElementById("pngbase64").innerHTML=pngOutHtml;
+                    });    
+                    // output download link for base64 SVG converted on download from base64
+                    var svgOutHtml = `<a href="data:image/svg+xml;base64,${OUTsvgBASE64}" download=${doctitle}.svg>SVG - Click here to download current rendered flowchart as ${doctitle}.svg</a> `
+                        document.getElementById("svgbase64").innerHTML=svgOutHtml;
+                    })();
+
+                            };
+                 
+
+// derived from https://stackoverflow.com/a/64800570
+// we need to use web browser canvas to generate a image. In this case png
+let imageUtil = {};
+/**
+ * converts a base64 encoded data url SVG image to a PNG image
+ * @param originalBase64 data url of svg image
+ * @param width target width in pixel of PNG image
+ * @param secondTry used internally to prevent endless recursion
+ * @return {Promise<unknown>} resolves to png data url of the image
+ */
+imageUtil.base64SvgToBase64Png = function (originalBase64, width, height, secondTry) {
+    return new Promise(resolve => {
+        let img = document.createElement('img');
+        img.onload = function () {
+            if (!secondTry && (img.naturalWidth === 0 || img.naturalHeight === 0)) {
+                let svgDoc = base64ToSvgDocument(originalBase64);
+                let fixedDoc = fixSvgDocumentFF(svgDoc);
+                return imageUtil.base64SvgToBase64Png(svgDocumentToBase64(fixedDoc), width, height, true).then(result => {
+                    resolve(result);
+                });
+            }
+            //document.body.appendChild(img);
+            let canvas2 = document.createElement("canvas");
+            //document.body.removeChild(img);
+            canvas2.width = width;
+            canvas2.height = height;
+            let ctx = canvas2.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas2.width, canvas2.height);
+            try {
+                let data = canvas2.toDataURL('image/png');
+                resolve(data);
+            } catch (e) {
+                resolve(null);
+            }
+        };
+        img.src = originalBase64;
+    });
+}
+
+//needed because Firefox doesn't correctly handle SVG with size = 0, see https://bugzilla.mozilla.org/show_bug.cgi?id=700533
+function fixSvgDocumentFF(svgDocument) {
+    try {
+        let widthInt = parseInt(svgDocument.documentElement.width.baseVal.value) || 500;
+        let heightInt = parseInt(svgDocument.documentElement.height.baseVal.value) || 500;
+        svgDocument.documentElement.width.baseVal.newValueSpecifiedUnits(SVGLength.SVG_LENGTHTYPE_PX, widthInt);
+        svgDocument.documentElement.height.baseVal.newValueSpecifiedUnits(SVGLength.SVG_LENGTHTYPE_PX, heightInt);
+        return svgDocument;
+    } catch (e) {
+        return svgDocument;
+    }
+}
+
+function svgDocumentToBase64(svgDocument) {
+    try {
+        let base64EncodedSVG = btoa(new XMLSerializer().serializeToString(svgDocument));
+        return 'data:image/svg+xml;base64,' + base64EncodedSVG;
+    } catch (e) {
+        return null;
+    }
+}
+
+function base64ToSvgDocument(base64) {
+    let svg = atob(base64.substring(base64.indexOf('base64,') + 7));
+    svg = svg.substring(svg.indexOf('<svg'));
+    let parser = new DOMParser();
+    return parser.parseFromString(svg, "image/svg+xml");
+} 
+        </script>
+
+        <script>
+            function HelpText() {
+              var x = document.getElementById("HelpTextBlock");
+              if (x.style.display === "none") {
+                x.style.display = "block";
+              } else {
+                x.style.display = "none";
+              }
+            }
+        </script>
+    </head>
+    <body>
+        <div><textarea id="code" style="width: 100%;" rows="11">op2=>operation: from random import randint
+op4=>operation: from datetime import datetime
+st7=>start: start mainMenu
+io9=>inputoutput: input: 
+sub12=>subroutine: print('\n\n\t\t\t\t\t\t\t\t\t\t\t\tWELCOME TO BANKING SERVICE SYSTEM')
+sub14=>subroutine: print('\nHere are the User Type for this Banking System')
+sub16=>subroutine: print('\n\tChoose user Type(1/2/3): ')
+sub18=>subroutine: print('\t1. Super User Account')
+sub20=>subroutine: print('\t2. ADMIN')
+sub22=>subroutine: print('\t3. CUSTOMER')
+sub24=>subroutine: print('\t0. Terminate Program')
+op26=>operation: menuc = int(input('\nEnter Your Choice: '))
+cond29=>condition: if (menuc == 1)
+sub33=>subroutine: print("You've Chosen the Super User Account.")
+sub35=>subroutine: superUserLogin()
+e102=>end: end mainMenu
+st106=>start: start superUserLogin
+io108=>inputoutput: input: 
+sub111=>subroutine: print('\n\tLOGIN TO USE SUPER USER ACCOUNT SYSTEMS\n')
+sub113=>subroutine: print('Enter your username: ')
+op115=>operation: username = input()
+sub117=>subroutine: print('Enter your password: ')
+op119=>operation: password = input()
+cond122=>condition: if ((username == 'Super User') and (password == '444602'))
+sub126=>subroutine: print('\nLogin Successful. Welcome to Super User Account System.')
+sub128=>subroutine: superUserMenu()
+e137=>end: end superUserLogin
+st141=>start: start superUserMenu
+io143=>inputoutput: input: 
+sub146=>subroutine: print('\n\nHere are the functionalities for Super User Account')
+sub148=>subroutine: print('\t1. Create Admin Account')
+sub150=>subroutine: print('\t2. View Admin Information')
+sub152=>subroutine: print('\t3. Update Admin Password')
+sub154=>subroutine: print('\t4. Delete Admin Information')
+sub156=>subroutine: print('\t5. Logout')
+op158=>operation: superc1 = int(input('\nEnter Your Choice(1/2/3/4/5): '))
+cond161=>condition: if (superc1 == 1)
+sub165=>subroutine: createAdminAccount()
+e214=>end: end superUserMenu
+st218=>start: start createAdminAccount
+io220=>inputoutput: input: 
+op223=>operation: admin_id = input('Enter Admin ID: ')
+op225=>operation: admin_password = input('Enter Admin Password: ')
+op227=>operation: branch_name = input('Enter Branch Name: ')
+op229=>operation: admin_ids = set()
+op231=>operation: try:
+    with open('adminInfo.txt', 'r') as file:
+        for line in file:
+            admin_data = line.strip().split(', ')
+            admin_ids.add(admin_data[0])
+except FileNotFoundError:
+    pass
+cond234=>condition: if (admin_id in admin_ids)
+sub238=>subroutine: print('\nAdmin ID already exists. Please choose a different ID.')
+sub240=>subroutine: superUserMenu()
+e243=>end: end function return
+op249=>operation: with open('adminInfo.txt', 'a') as file:
+    file.write(f'''{admin_id}, {admin_password}, {branch_name}
+''')
+sub251=>subroutine: print('\nAdmin Account Created Successfully')
+sub253=>subroutine: print('\nDo You Want To Create Another Admin Account [0-Yes/1-No]')
+op255=>operation: choice = int(input('Enter Your Choice: '))
+cond258=>condition: if (choice == 0)
+sub262=>subroutine: createAdminAccount()
+e279=>end: end createAdminAccount
+st283=>start: start viewAdminAccount
+io285=>inputoutput: input: 
+op288=>operation: try:
+    with open('adminInfo.txt', 'r') as file:
+        admin_info = [line.strip().split(', ') for line in file]
+    print('\nAll Admin Information:')
+    for admin in admin_info:
+        print(f'Admin ID: {admin[0]}, Admin Password: {admin[1]}, Branch Name: {admin[2]}')
+    superUserMenu()
+except FileNotFoundError:
+    print('Admin information file not found.')
+    superUserMenu()
+e290=>end: end viewAdminAccount
+st294=>start: start updateAdminPassword
+io296=>inputoutput: input: 
+op299=>operation: try:
+    with open('adminInfo.txt', 'r') as file:
+        info = [line.strip().split(', ') for line in file]
+    print('\nAll Admin Information')
+    for admin in info:
+        print(f'Admin ID: {admin[0]}, Admin Password: {admin[1]}, Branch Name: {admin[2]}')
+    admin_id_to_update = input('\nEnter the Admin ID you want to update password for: ')
+    found = False
+    for i in range(len(info)):
+        admin_data = info[i]
+        if (admin_data[0] == admin_id_to_update):
+            found = True
+            new_password = input('Enter the new password: ')
+            admin_data[1] = new_password
+            info[i] = admin_data
+            break
+    if found:
+        with open('adminInfo.txt', 'w') as file:
+            for admin in info:
+                file.write((', '.join(admin) + '\n'))
+        print('\nPassword updated successfully!')
+        superUserMenu()
+    else:
+        print('Admin ID not found!')
+        superUserMenu()
+except FileNotFoundError:
+    print('Admin information file not found.')
+    superUserMenu()
+e301=>end: end updateAdminPassword
+st305=>start: start deleteAdminAccount
+io307=>inputoutput: input: 
+op310=>operation: try:
+    with open('adminInfo.txt', 'r') as file:
+        info = [line.strip().split(', ') for line in file]
+    print('\nCurrent Admin Information')
+    for admin in info:
+        print(f'Admin ID; {admin[0]}, Admin Password: {admin[1]}, Branch Name: {admin[2]}')
+    admin_id_to_delete = input('Enter the Admin ID you want to delete: ')
+    found = False
+    updated_info = []
+    for admin_data in info:
+        if (admin_data[0] == admin_id_to_delete):
+            found = True
+        else:
+            updated_info.append(admin_data)
+    if found:
+        with open('adminInfo.txt', 'w') as file:
+            for admin_data in updated_info:
+                file.write((', '.join(admin_data) + '\n'))
+        print('Admin information deleted successfully!')
+        superUserMenu()
+    else:
+        print('Admin ID not found!')
+        superUserMenu()
+except FileNotFoundError:
+    print('Admin information file not found.')
+e312=>end: end deleteAdminAccount
+st316=>start: start adminLogin
+io318=>inputoutput: input: 
+op321=>operation: admin_id = input('Enter Admin ID: ')
+op323=>operation: admin_password = input('Enter Admin Password: ')
+op325=>operation: try:
+    with open('adminInfo.txt', 'r') as file:
+        for line in file:
+            admin_data = line.strip().split(', ')
+            if ((admin_data[0] == admin_id) and (admin_data[1] == admin_password)):
+                print('\nLogin Successful. Welcome to Banking Service Admin System.\n')
+                adminMenu()
+                return
+        print('\nInvalid Admin ID or Password\n')
+        adminLogin()
+except FileNotFoundError:
+    print('\nAdmin information file not found.\n')
+e327=>end: end adminLogin
+st331=>start: start adminMenu
+io333=>inputoutput: input: 
+sub336=>subroutine: print('\nHere Are The Functionalities for Admin')
+sub338=>subroutine: print('\n\tChoose One Menu')
+sub340=>subroutine: print('\t1. Approve Customer Registration.')
+sub342=>subroutine: print('\t2. Create Customer Account.')
+sub344=>subroutine: print('\t3. Display Customer Information.')
+sub346=>subroutine: print('\t4. Update Customer Account Password.')
+sub348=>subroutine: print('\t5. Delete Customer Account.')
+sub350=>subroutine: print('\t6. View Statement by Daily, Monthly, Yearly.')
+sub352=>subroutine: print('\t7. Update Customer Info.')
+sub354=>subroutine: print('\t8. Logout.')
+op356=>operation: adminc = int(input('\nEnter Your Choice: '))
+cond359=>condition: if (adminc == 1)
+sub363=>subroutine: approveRegistration()
+e442=>end: end adminMenu
+st446=>start: start approveRegistration
+io448=>inputoutput: input: 
+op451=>operation: pending_customers = []
+op453=>operation: try:
+    with open('customerInfo.txt', 'r') as file:
+        for line in file:
+            customer_data = line.strip().split(', ')
+            if (customer_data[(- 1)] == 'pending'):
+                pending_customers.append(customer_data)
+except FileNotFoundError:
+    print('\nCustomer information file not found.\n')
+    adminMenu()
+    return
+cond456=>condition: if (not pending_customers)
+sub460=>subroutine: print('\nNo pending registrations at the moment.\n')
+sub462=>subroutine: adminMenu()
+e465=>end: end function return
+sub471=>subroutine: print('\nPending Registrations:')
+cond474=>operation: print(f'{(index + 1)}. Customer Name: {customer[0]}, Passport/IC Number: {customer[5]}') while  (index, customer) in enumerate(pending_customers)
+op486=>operation: passport_number = input('\nEnter Passport Number to approve or decline registration: ')
+op488=>operation: found = False
+cond491=>condition: for i in range(len(pending_customers))
+cond601=>condition: if (pending_customers[i][5] == passport_number)
+op605=>operation: found = True
+op607=>operation: status = input('Enter status (confirmed/declined): ')
+cond610=>condition: if (status == 'confirmed')
+op614=>operation: account_number = generateAccountNumber()
+op616=>operation: pending_customers[i][(- 1)] = 'confirmed'
+op618=>operation: pending_customers[i] += [account_number]
+op620=>operation: with open('customerInfo.txt', 'w') as file:
+    for customer in pending_customers:
+        file.write((', '.join(customer) + '\n'))
+sub622=>subroutine: print(f'''
+Registration for {passport_number} confirmed. Name: {customer[0]}, Account Number: {account_number}
+''')
+sub624=>subroutine: print('Do you want to create account for this customer now?[0-Yes/1-No]')
+op626=>operation: c2 = int(input('Enter Your Choice(0/1): '))
+cond629=>condition: if (c2 == 0)
+sub633=>subroutine: createCustomerAccount()
+cond638=>condition: if (c2 == 1)
+sub642=>subroutine: approveRegistration()
+sub646=>subroutine: print('Invalid Input')
+sub648=>subroutine: adminMenu()
+cond655=>condition: if (status == 'declined')
+op659=>operation: pending_customers[i][(- 1)] = 'declined'
+op661=>operation: with open('customerInfo.txt', 'w') as file:
+    for customer in pending_customers:
+        file.write((', '.join(customer) + '\n'))
+sub663=>subroutine: print(f'''
+Registration for {passport_number} declined.
+''')
+sub665=>subroutine: print('Do you want to  confirmed/declined another account[0-Yes/1-No]')
+op667=>operation: c1 = int(input('Enter Your Choice: '))
+cond670=>condition: if (c1 == 0)
+sub674=>subroutine: approveRegistration()
+cond679=>condition: if (c1 == 1)
+sub683=>subroutine: adminMenu()
+sub687=>subroutine: print('Wrong Input!')
+sub689=>subroutine: adminMenu()
+sub695=>subroutine: print("\nInvalid status. Please enter 'confirmed' or 'declined'.\n")
+sub697=>subroutine: adminMenu()
+cond707=>condition: if (not found)
+sub711=>subroutine: print('\nPassport Number not found or already processed.\n')
+sub713=>subroutine: adminMenu()
+e716=>end: end function return
+e722=>end: end approveRegistration
+st726=>start: start generateAccountNumber
+io728=>inputoutput: input: 
+op731=>operation: account_numbers = set()
+op733=>operation: try:
+    with open('customerInfo.txt', 'r') as file:
+        for line in file:
+            customer_data = line.strip().split(', ')
+            if ((len(customer_data) > 6) and (customer_data[6] != 'pending')):
+                account_numbers.add(customer_data[6])
+except FileNotFoundError:
+    pass
+cond736=>condition: while True
+op757=>operation: account_number = randint(10000000, 99999999)
+cond760=>condition: if (account_number not in account_numbers)
+io767=>inputoutput: output:  str(account_number)
+e765=>end: end function return
+e775=>end: end generateAccountNumber
+st779=>start: start createCustomerAccount
+io781=>inputoutput: input: 
+op784=>operation: customer_name = input('Enter Customer Name: ')
+op786=>operation: account_number = input('Enter Account Number: ')
+op788=>operation: default_password = input('Enter Default Password: ')
+op790=>operation: account_type = input('Enter Account Type (Savings Account or Current Account): ')
+cond793=>condition: if (account_type == 'Savings Account')
+op797=>operation: initial_balance = 100
+op818=>operation: with open('customerAccountInfo.txt', 'a') as file:
+    file.write(f'''{customer_name}, {account_number}, {default_password}, {account_type}, {initial_balance}
+''')
+sub820=>subroutine: print('\nCustomer Account Created Successfully\n')
+sub822=>subroutine: print('Do you want to  confirmed/declined another account[0-Yes/1-No]')
+op824=>operation: c1 = int(input('Enter Your Choice: '))
+cond827=>condition: if (c1 == 0)
+sub831=>subroutine: approveRegistration()
+e850=>end: end createCustomerAccount
+st854=>start: start displayCustomerInformation
+io856=>inputoutput: input: 
+op859=>operation: try:
+    with open('customerAccountInfo.txt', 'r') as file:
+        print('\nCustomer Information:')
+        for line in file:
+            customer_data = line.strip().split(', ')
+            print(f'Name: {customer_data[0]}, Account Number: {customer_data[1]}, Account Type: {customer_data[3]}, Balance: RM {customer_data[4]}')
+except FileNotFoundError:
+    print('\nCustomer account information file not found.\n')
+sub861=>subroutine: adminMenu()
+e863=>end: end displayCustomerInformation
+st867=>start: start updateCustomerPassword
+io869=>inputoutput: input: 
+op872=>operation: account_number = input('Enter Account Number: ')
+op874=>operation: new_password = input('Enter New Password: ')
+op876=>operation: try:
+    with open('customerAccountInfo.txt', 'r') as file:
+        lines = file.readlines()
+    found = False
+    with open('customerAccountInfo.txt', 'w') as file:
+        for line in lines:
+            customer_data = line.strip().split(', ')
+            if (customer_data[1] == account_number):
+                customer_data[2] = new_password
+                updated_line = ', '.join(customer_data)
+                file.write((updated_line + '\n'))
+                found = True
+            else:
+                file.write(line)
+    if (not found):
+        print('\nInvalid Account Number or Password\n')
+        return
+    print('\nPassword Updated Successfully!\n')
+except FileNotFoundError:
+    print('\nCustomer account information file not found.\n')
+sub878=>subroutine: adminMenu()
+e880=>end: end updateCustomerPassword
+st884=>start: start deleteCustomerAccount
+io886=>inputoutput: input: 
+op889=>operation: try:
+    with open('customerAccountInfo.txt', 'r') as file:
+        lines = file.readlines()
+    print('\nCustomer Accounts:')
+    for line in lines:
+        customer_data = line.strip().split(', ')
+        print(f'Name: {customer_data[0]}, Account Number: {customer_data[1]}, Account Type: {customer_data[3]}, Balance: RM {customer_data[4]}')
+    account_number = input('\nEnter Account Number to Delete: ')
+    found = False
+    with open('customerAccountInfo.txt', 'w') as file:
+        for line in lines:
+            customer_data = line.strip().split(', ')
+            if (customer_data[1] == account_number):
+                found = True
+            else:
+                file.write(line)
+    if found:
+        print('\nCustomer Account Deleted Successfully!\n')
+        adminMenu()
+    else:
+        print('\nAccount Number not found.\n')
+        adminMenu()
+except FileNotFoundError:
+    print('\nCustomer account information file not found.\n')
+    adminMenu()
+e891=>end: end deleteCustomerAccount
+st895=>start: start viewStatementByAdmin
+io897=>inputoutput: input: 
+op900=>operation: account_number = input('Enter your account number: ')
+sub902=>subroutine: print('Select the type of transaction details you want to view: ')
+sub904=>subroutine: print('\n\t1. Daily')
+sub906=>subroutine: print('\t2. Monthly')
+sub908=>subroutine: print('\t3. Yearly')
+op910=>operation: choice = input('Enter your choice (1/2/3): ')
+op912=>operation: try:
+    with open('transactionHistory.txt', 'r') as file:
+        transactions = file.readlines()
+    account_transactions = [t for t in transactions if (t.split(', ')[1] == account_number)]
+    if (not account_transactions):
+        print('No transactions found for this account number.')
+        return
+    if (choice == '1'):
+        date_input = input('Enter the date in YYYY-MM-DD format to view daily transactions: ')
+        date_filter = (lambda date: date.startswith(date_input))
+    elif (choice == '2'):
+        month_input = input('Enter the month in YYYY-MM format to view monthly transactions: ')
+        date_filter = (lambda date: date.startswith(month_input))
+    elif (choice == '3'):
+        year_input = input('Enter the year in YYYY format to view yearly transactions: ')
+        date_filter = (lambda date: (date.split('-')[0] == year_input))
+    else:
+        print('Invalid choice.')
+        return
+    print('\nTransactions:\n')
+    has_transactions = False
+    for transaction in account_transactions:
+        transaction_details = transaction.split(', ')
+        date_time = transaction_details[3]
+        if date_filter(date_time):
+            has_transactions = True
+            print(f'Transaction Type: {transaction_details[0]}, Amount: {transaction_details[2]}, Date & Time: {date_time}, New Balance: {transaction_details[4].strip()}')
+    if (not has_transactions):
+        print('No transactions found for this period.')
+except FileNotFoundError:
+    print('Transaction history file not found.')
+sub914=>subroutine: adminMenu()
+e916=>end: end viewStatementByAdmin
+st920=>start: start updateCustomerInfo
+io922=>inputoutput: input: 
+op925=>operation: passport_number = input('Enter Passport Number: ')
+op927=>operation: try:
+    with open('customerInfo.txt', 'r') as file:
+        lines = file.readlines()
+    found = False
+    with open('customerInfo.txt', 'w') as file:
+        for line in lines:
+            customer_data = line.strip().split(', ')
+            if (customer_data[5] == passport_number):
+                new_dob = input('Enter New Date of Birth (DD/MM/YYYY): ')
+                new_email = input('Enter New Email: ')
+                new_phone = input('Enter New Phone Number: ')
+                customer_data[1] = new_dob
+                customer_data[2] = new_email
+                customer_data[3] = new_phone
+                updated_line = ', '.join(customer_data)
+                file.write((updated_line + '\n'))
+                found = True
+            else:
+                file.write(line)
+    if (not found):
+        print('\nPassport Number not found\n')
+        adminMenu()
+        return
+    print('\nCustomer Information Updated Successfully!\n')
+    adminMenu()
+except FileNotFoundError:
+    print('\nCustomer information file not found.\n')
+sub929=>subroutine: adminMenu()
+e931=>end: end updateCustomerInfo
+st935=>start: start registerCustomerAccount
+io937=>inputoutput: input: 
+op940=>operation: customer_info = []
+op942=>operation: try:
+    with open('customerInfo.txt', 'r') as file:
+        for line in file:
+            customer_data = line.strip().split(', ')
+            customer_info.append(customer_data[5])
+except FileNotFoundError:
+    pass
+op944=>operation: customer_name = input('Enter Customer Name: ')
+op946=>operation: dob = input('Enter Date of Birth (DD/MM/YYYY): ')
+op948=>operation: email = input('Enter Email: ')
+op950=>operation: phone_number = input('Enter Phone Number: ')
+op952=>operation: country = input('Enter Country: ')
+op954=>operation: passport_number = input('Enter IC/Passport Number: ')
+op956=>operation: gender = input('Enter Gender: ')
+cond959=>condition: if (passport_number in customer_info)
+sub963=>subroutine: print('\nPassport Number already exists. Please choose a different Passport Number.\n')
+sub965=>subroutine: registerCustomerAccount()
+e968=>end: end function return
+op974=>operation: with open('customerInfo.txt', 'a') as file:
+    file.write(f'''{customer_name}, {dob}, {email}, {phone_number}, {country}, {passport_number}, {gender}, pending
+''')
+sub976=>subroutine: print('\nCustomer Account Registration Successful. Please wait for the Approval.\n')
+sub978=>subroutine: mainMenu()
+e980=>end: end registerCustomerAccount
+st984=>start: start customerLogin
+io986=>inputoutput: input: 
+op989=>operation: account_number = input('Enter Account Number: ')
+op991=>operation: password = input('Enter Password: ')
+op993=>operation: try:
+    with open('customerAccountInfo.txt', 'r') as file:
+        for line in file:
+            customer_data = line.strip().split(', ')
+            if ((customer_data[1] == account_number) and (customer_data[2] == password)):
+                print('\nLogin Successful!\nWelcome to Banking Service Customer System.')
+                customerMenu(customer_data[0], account_number, customer_data[4])
+                return
+        print('\nInvalid Account Number or Password\n')
+        customerLogin()
+except FileNotFoundError:
+    print('\nCustomer account information file not found.\n')
+e995=>end: end customerLogin
+st999=>start: start customerMenu
+io1001=>inputoutput: input: customer_name, account_number, balance
+sub1004=>subroutine: print(f'''
+
+						Customer Name: {customer_name} 					Account Number: {account_number} 					Balance: RM {balance}''')
+sub1006=>subroutine: print(f'''
+
+Here Are The Functionalities for {customer_name}''')
+sub1008=>subroutine: print('\n\tChoose One Menu')
+sub1010=>subroutine: print('\t1. Deposit Money')
+sub1012=>subroutine: print('\t2. Cash Withdrawal')
+sub1014=>subroutine: print('\t3. Bank Statement by Daily, Monthly, and Yearly')
+sub1016=>subroutine: print('\t4. Change Your Password')
+sub1018=>subroutine: print('\t5. Logout')
+op1020=>operation: customerc = int(input('Enter Your Choice: '))
+cond1023=>condition: if (customerc == 1)
+sub1027=>subroutine: depositMoney()
+e1074=>end: end customerMenu
+st1078=>start: start depositMoney
+io1080=>inputoutput: input: 
+op1083=>operation: account_number = input('Enter Account Number: ')
+op1085=>operation: password = input('Enter Password: ')
+op1087=>operation: deposit_amount = float(input('Enter Amount to Deposit: '))
+op1089=>operation: try:
+    with open('customerAccountInfo.txt', 'r') as file:
+        lines = file.readlines()
+    found = False
+    with open('customerAccountInfo.txt', 'w') as file:
+        for line in lines:
+            customer_data = line.strip().split(', ')
+            if ((customer_data[1] == account_number) and (customer_data[2] == password)):
+                current_balance = float(customer_data[(- 1)])
+                new_balance = (current_balance + deposit_amount)
+                customer_data[(- 1)] = str(new_balance)
+                updated_line = ', '.join(customer_data)
+                file.write((updated_line + '\n'))
+                found = True
+            else:
+                file.write(line)
+    if (not found):
+        print('\nInvalid Account Number or Password\n')
+        customerMenu(customer_data[0], account_number, customer_data[4])
+        return
+    with open('transactionHistory.txt', 'a') as file:
+        transaction_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        file.write(f'''Deposit, {account_number}, {deposit_amount}, {transaction_time}, New Balance = {new_balance}
+''')
+    print('\nDeposit Successful!\n')
+    print('Do you want to deposit again or go back to customer menu? [0-Yes/1-No]: ')
+    c1 = int(input('Enter Your Choice: '))
+    if (c1 == 0):
+        depositMoney()
+    elif (c1 == 1):
+        customerMenu(customer_data[0], account_number, customer_data[4])
+    else:
+        print('Invalid Input!')
+        customerMenu(customer_data[0], account_number, customer_data[4])
+except FileNotFoundError:
+    print('\nCustomer account information file not found.\n')
+    customerMenu(customer_data[0], account_number, customer_data[4])
+e1091=>end: end depositMoney
+st1095=>start: start cashWithdrawal
+io1097=>inputoutput: input: 
+op1100=>operation: account_number = input('Enter Account Number: ')
+op1102=>operation: password = input('Enter Password: ')
+op1104=>operation: withdrawal_amount = float(input('Enter Amount to Withdraw: '))
+op1106=>operation: try:
+    with open('customerAccountInfo.txt', 'r') as file:
+        lines = file.readlines()
+    found = False
+    with open('customerAccountInfo.txt', 'w') as file:
+        for line in lines:
+            customer_data = line.strip().split(', ')
+            if ((customer_data[1] == account_number) and (customer_data[2] == password)):
+                current_balance = float(customer_data[(- 1)])
+                account_type = customer_data[3]
+                if ((account_type == 'Savings Account') and ((current_balance - withdrawal_amount) < 100)):
+                    print('\nWithdrawal amount would result in balance below minimum for Savings Account (100 RM).\n')
+                    customerMenu(customer_data[0], account_number, customer_data[4])
+                    return
+                elif ((account_type == 'Current Account') and ((current_balance - withdrawal_amount) < 500)):
+                    print('\nWithdrawal amount would result in balance below minimum for Current Account (500 RM).\n')
+                    customerMenu(customer_data[0], account_number, customer_data[4])
+                    return
+                elif (current_balance < withdrawal_amount):
+                    print('\nInsufficient balance for withdrawal.\n')
+                    customerMenu(customer_data[0], account_number, customer_data[4])
+                    return
+                else:
+                    new_balance = (current_balance - withdrawal_amount)
+                    customer_data[(- 1)] = str(new_balance)
+                    updated_line = ', '.join(customer_data)
+                    file.write((updated_line + '\n'))
+                    found = True
+            else:
+                file.write(line)
+    if (not found):
+        print('\nInvalid Account Number or Password\n')
+        customerMenu(customer_data[0], account_number, customer_data[4])
+        return
+    with open('transactionHistory.txt', 'a') as file:
+        transaction_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        file.write(f'''Withdrawal, {account_number}, {withdrawal_amount}, {transaction_time}, New Balance = {new_balance}
+''')
+    print('\nWithdrawal Successful!\n')
+    print('Do you want to withdraw money again or go back to customer menu? [0-Yes/1-No]: ')
+    c1 = int(input('Enter Your Choice: '))
+    if (c1 == 0):
+        cashWithdrawal()
+    elif (c1 == 1):
+        customerMenu(customer_data[0], account_number, customer_data[4])
+    else:
+        print('Invalid Input!')
+        customerMenu(customer_data[0], account_number, customer_data[4])
+except FileNotFoundError:
+    print('\nCustomer account information file not found.\n')
+    customerMenu(customer_data[0], account_number, customer_data[4])
+e1108=>end: end cashWithdrawal
+st1112=>start: start bankStatementByCustomer
+io1114=>inputoutput: input: 
+op1117=>operation: account_number = input('Enter Account Number: ')
+op1119=>operation: password = input('Enter Password: ')
+op1121=>operation: try:
+    with open('customerAccountInfo.txt', 'r') as file:
+        account_found = False
+        for line in file:
+            customer_data = line.strip().split(', ')
+            if ((customer_data[1] == account_number) and (customer_data[2] == password)):
+                account_found = True
+                break
+        if (not account_found):
+            print('\nInvalid Account Number or Password\n')
+            customerMenu(customer_data[0], account_number, customer_data[4])
+            return
+    with open('transactionHistory.txt', 'r') as file:
+        transactions = []
+        for line in file:
+            transaction_data = line.strip().split(', ')
+            if (transaction_data[1] == account_number):
+                transactions.append(transaction_data)
+        if (not transactions):
+            print('\nNo transactions found for this account number.\n')
+            customerMenu(customer_data[0], account_number, customer_data[4])
+            return
+    print('\nSelect Option:\n')
+    print('\t1. Daily Statement')
+    print('\t2. Monthly Statement')
+    print('\t3. Yearly Statement')
+    option = int(input('\nEnter Your Choice: '))
+    if (option == 1):
+        date = input('Enter Date (YYYY-MM-DD): ')
+        print(f'''
+Daily Statement for {date}:''')
+        for transaction in transactions:
+            if transaction[3].startswith(date):
+                print(f'Transaction Type: {transaction[0]}, Transaction Amount: {transaction[2]}, Date & Time: {transaction[3]}, New Balance: RM {transaction[4]}')
+    elif (option == 2):
+        month = input('Enter Month (YYYY-MM): ')
+        print(f'''
+Monthly Statement for {month}:''')
+        for transaction in transactions:
+            if transaction[3].startswith(month):
+                print(f'Transaction Type: {transaction[0]}, Transaction Amount: {transaction[2]}, Date & Time: {transaction[3]}, New Balance: RM {transaction[4]}')
+    elif (option == 3):
+        year = input('Enter Year (YYYY): ')
+        print(f'''
+Yearly Statement for {year}:''')
+        for transaction in transactions:
+            if transaction[3].startswith(year):
+                print(f'Transaction Type: {transaction[0]}, Transaction Amount: {transaction[2]}, Date & Time: {transaction[3]}, New Balance: RM {transaction[4]}')
+    else:
+        print('\nInvalid Option\n')
+except FileNotFoundError:
+    print('\nTransaction history file not found.\n')
+sub1123=>subroutine: customerMenu(customer_data[0], account_number, customer_data[4])
+e1125=>end: end bankStatementByCustomer
+st1129=>start: start updateCustomerAccountPassword
+io1131=>inputoutput: input: 
+op1134=>operation: account_number = input('Enter Account Number: ')
+op1136=>operation: current_password = input('Enter Current Password: ')
+op1138=>operation: new_password = input('Enter New Password: ')
+op1140=>operation: try:
+    with open('customerAccountInfo.txt', 'r') as file:
+        lines = file.readlines()
+    found = False
+    with open('customerAccountInfo.txt', 'w') as file:
+        for line in lines:
+            customer_data = line.strip().split(', ')
+            if ((customer_data[1] == account_number) and (customer_data[2] == current_password)):
+                customer_data[2] = new_password
+                updated_line = ', '.join(customer_data)
+                file.write((updated_line + '\n'))
+                found = True
+            else:
+                file.write(line)
+    if (not found):
+        print('\nInvalid Account Number or Password\n')
+        customerMenu(customer_data[0], account_number, customer_data[4])
+        return
+    print('\nPassword Updated Successfully!\n')
+    customerMenu(customer_data[0], account_number, customer_data[4])
+except FileNotFoundError:
+    print('\nCustomer account information file not found.\n')
+    customerMenu(customer_data[0], account_number, customer_data[4])
+e1142=>end: end updateCustomerAccountPassword
+sub1145=>subroutine: mainMenu()
+cond1032=>condition: if (customerc == 2)
+sub1036=>subroutine: cashWithdrawal()
+cond1041=>condition: if (customerc == 3)
+sub1045=>subroutine: bankStatementByCustomer()
+cond1050=>condition: if (customerc == 4)
+sub1054=>subroutine: updateCustomerAccountPassword()
+cond1059=>condition: if (customerc == 5)
+sub1063=>subroutine: mainMenu()
+sub1067=>subroutine: customerMenu(customer_name, account_number, balance)
+cond836=>condition: if (c1 == 1)
+sub840=>subroutine: adminMenu()
+sub844=>subroutine: print('Wrong Input!')
+sub846=>subroutine: adminMenu()
+cond802=>condition: if (account_type == 'Current Account')
+op806=>operation: initial_balance = 500
+sub810=>subroutine: print('Wrong Input')
+e813=>end: end function return
+cond368=>condition: if (adminc == 2)
+sub372=>subroutine: createCustomerAccount()
+cond377=>condition: if (adminc == 3)
+sub381=>subroutine: displayCustomerInformation()
+cond386=>condition: if (adminc == 4)
+sub390=>subroutine: updateCustomerPassword()
+cond395=>condition: if (adminc == 5)
+sub399=>subroutine: deleteCustomerAccount()
+cond404=>condition: if (adminc == 6)
+sub408=>subroutine: viewStatementByAdmin()
+cond413=>condition: if (adminc == 7)
+sub417=>subroutine: updateCustomerInfo()
+cond422=>condition: if (adminc == 8)
+sub426=>subroutine: mainMenu()
+sub430=>subroutine: print('Invalid Input. Enter the Correct Choice.')
+sub432=>subroutine: adminMenu()
+cond267=>condition: if (choice == 1)
+sub271=>subroutine: superUserMenu()
+sub275=>subroutine: superUserMenu()
+cond170=>condition: if (superc1 == 2)
+sub174=>subroutine: viewAdminAccount()
+cond179=>condition: if (superc1 == 3)
+sub183=>subroutine: updateAdminPassword()
+cond188=>condition: if (superc1 == 4)
+sub192=>subroutine: deleteAdminAccount()
+cond197=>condition: if (superc1 == 5)
+sub201=>subroutine: mainMenu()
+sub205=>subroutine: print('Invalid Input.')
+sub207=>subroutine: superUserMenu()
+sub132=>subroutine: print('Wrong Password!')
+sub134=>subroutine: superUserLogin()
+cond40=>condition: if (menuc == 2)
+sub44=>subroutine: print("\nYou've Chosen the Admin User Type.")
+sub46=>subroutine: adminLogin()
+cond51=>condition: if (menuc == 3)
+sub55=>subroutine: print('\n\t1. Do you have Account? Register Now.')
+sub57=>subroutine: print('\t2. Login. If you have Account')
+op59=>operation: c1 = int(input('\nEnter Your Choice: '))
+cond62=>condition: if (c1 == 1)
+sub66=>subroutine: registerCustomerAccount()
+cond71=>condition: if (c1 == 2)
+sub75=>subroutine: customerLogin()
+sub79=>subroutine: mainMenu()
+cond86=>condition: if (menuc == 0)
+sub90=>subroutine: print('Program Terminated. Good Bye!')
+sub94=>subroutine: print('Wrong Input.')
+sub96=>subroutine: mainMenu()
+
+op2->op4
+op4->st7
+st7->io9
+io9->sub12
+sub12->sub14
+sub14->sub16
+sub16->sub18
+sub18->sub20
+sub20->sub22
+sub22->sub24
+sub24->op26
+op26->cond29
+cond29(yes)->sub33
+sub33->sub35
+sub35->e102
+e102->st106
+st106->io108
+io108->sub111
+sub111->sub113
+sub113->op115
+op115->sub117
+sub117->op119
+op119->cond122
+cond122(yes)->sub126
+sub126->sub128
+sub128->e137
+e137->st141
+st141->io143
+io143->sub146
+sub146->sub148
+sub148->sub150
+sub150->sub152
+sub152->sub154
+sub154->sub156
+sub156->op158
+op158->cond161
+cond161(yes)->sub165
+sub165->e214
+e214->st218
+st218->io220
+io220->op223
+op223->op225
+op225->op227
+op227->op229
+op229->op231
+op231->cond234
+cond234(yes)->sub238
+sub238->sub240
+sub240->e243
+cond234(no)->op249
+op249->sub251
+sub251->sub253
+sub253->op255
+op255->cond258
+cond258(yes)->sub262
+sub262->e279
+e279->st283
+st283->io285
+io285->op288
+op288->e290
+e290->st294
+st294->io296
+io296->op299
+op299->e301
+e301->st305
+st305->io307
+io307->op310
+op310->e312
+e312->st316
+st316->io318
+io318->op321
+op321->op323
+op323->op325
+op325->e327
+e327->st331
+st331->io333
+io333->sub336
+sub336->sub338
+sub338->sub340
+sub340->sub342
+sub342->sub344
+sub344->sub346
+sub346->sub348
+sub348->sub350
+sub350->sub352
+sub352->sub354
+sub354->op356
+op356->cond359
+cond359(yes)->sub363
+sub363->e442
+e442->st446
+st446->io448
+io448->op451
+op451->op453
+op453->cond456
+cond456(yes)->sub460
+sub460->sub462
+sub462->e465
+cond456(no)->sub471
+sub471->cond474
+cond474->op486
+op486->op488
+op488->cond491
+cond491(yes)->cond601
+cond601(yes)->op605
+op605->op607
+op607->cond610
+cond610(yes)->op614
+op614->op616
+op616->op618
+op618->op620
+op620->sub622
+sub622->sub624
+sub624->op626
+op626->cond629
+cond629(yes)->sub633
+sub633->cond491
+cond629(no)->cond638
+cond638(yes)->sub642
+sub642->cond491
+cond638(no)->sub646
+sub646->sub648
+sub648->cond491
+cond610(no)->cond655
+cond655(yes)->op659
+op659->op661
+op661->sub663
+sub663->sub665
+sub665->op667
+op667->cond670
+cond670(yes)->sub674
+sub674->cond491
+cond670(no)->cond679
+cond679(yes)->sub683
+sub683->cond491
+cond679(no)->sub687
+sub687->sub689
+sub689->cond491
+cond655(no)->sub695
+sub695->sub697
+sub697->cond491
+cond601(no)->cond491
+cond491(no)->cond707
+cond707(yes)->sub711
+sub711->sub713
+sub713->e716
+cond707(no)->e722
+e722->st726
+st726->io728
+io728->op731
+op731->op733
+op733->cond736
+cond736(yes)->op757
+op757->cond760
+cond760(yes)->io767
+io767->e765
+cond760(no)->cond736
+cond736(no)->e775
+e775->st779
+st779->io781
+io781->op784
+op784->op786
+op786->op788
+op788->op790
+op790->cond793
+cond793(yes)->op797
+op797->op818
+op818->sub820
+sub820->sub822
+sub822->op824
+op824->cond827
+cond827(yes)->sub831
+sub831->e850
+e850->st854
+st854->io856
+io856->op859
+op859->sub861
+sub861->e863
+e863->st867
+st867->io869
+io869->op872
+op872->op874
+op874->op876
+op876->sub878
+sub878->e880
+e880->st884
+st884->io886
+io886->op889
+op889->e891
+e891->st895
+st895->io897
+io897->op900
+op900->sub902
+sub902->sub904
+sub904->sub906
+sub906->sub908
+sub908->op910
+op910->op912
+op912->sub914
+sub914->e916
+e916->st920
+st920->io922
+io922->op925
+op925->op927
+op927->sub929
+sub929->e931
+e931->st935
+st935->io937
+io937->op940
+op940->op942
+op942->op944
+op944->op946
+op946->op948
+op948->op950
+op950->op952
+op952->op954
+op954->op956
+op956->cond959
+cond959(yes)->sub963
+sub963->sub965
+sub965->e968
+cond959(no)->op974
+op974->sub976
+sub976->sub978
+sub978->e980
+e980->st984
+st984->io986
+io986->op989
+op989->op991
+op991->op993
+op993->e995
+e995->st999
+st999->io1001
+io1001->sub1004
+sub1004->sub1006
+sub1006->sub1008
+sub1008->sub1010
+sub1010->sub1012
+sub1012->sub1014
+sub1014->sub1016
+sub1016->sub1018
+sub1018->op1020
+op1020->cond1023
+cond1023(yes)->sub1027
+sub1027->e1074
+e1074->st1078
+st1078->io1080
+io1080->op1083
+op1083->op1085
+op1085->op1087
+op1087->op1089
+op1089->e1091
+e1091->st1095
+st1095->io1097
+io1097->op1100
+op1100->op1102
+op1102->op1104
+op1104->op1106
+op1106->e1108
+e1108->st1112
+st1112->io1114
+io1114->op1117
+op1117->op1119
+op1119->op1121
+op1121->sub1123
+sub1123->e1125
+e1125->st1129
+st1129->io1131
+io1131->op1134
+op1134->op1136
+op1136->op1138
+op1138->op1140
+op1140->e1142
+e1142->sub1145
+cond1023(no)->cond1032
+cond1032(yes)->sub1036
+sub1036->e1074
+cond1032(no)->cond1041
+cond1041(yes)->sub1045
+sub1045->e1074
+cond1041(no)->cond1050
+cond1050(yes)->sub1054
+sub1054->e1074
+cond1050(no)->cond1059
+cond1059(yes)->sub1063
+sub1063->e1074
+cond1059(no)->sub1067
+sub1067->e1074
+cond827(no)->cond836
+cond836(yes)->sub840
+sub840->e850
+cond836(no)->sub844
+sub844->sub846
+sub846->e850
+cond793(no)->cond802
+cond802(yes)->op806
+op806->op818
+cond802(no)->sub810
+sub810->e813
+cond359(no)->cond368
+cond368(yes)->sub372
+sub372->e442
+cond368(no)->cond377
+cond377(yes)->sub381
+sub381->e442
+cond377(no)->cond386
+cond386(yes)->sub390
+sub390->e442
+cond386(no)->cond395
+cond395(yes)->sub399
+sub399->e442
+cond395(no)->cond404
+cond404(yes)->sub408
+sub408->e442
+cond404(no)->cond413
+cond413(yes)->sub417
+sub417->e442
+cond413(no)->cond422
+cond422(yes)->sub426
+sub426->e442
+cond422(no)->sub430
+sub430->sub432
+sub432->e442
+cond258(no)->cond267
+cond267(yes)->sub271
+sub271->e279
+cond267(no)->sub275
+sub275->e279
+cond161(no)->cond170
+cond170(yes)->sub174
+sub174->e214
+cond170(no)->cond179
+cond179(yes)->sub183
+sub183->e214
+cond179(no)->cond188
+cond188(yes)->sub192
+sub192->e214
+cond188(no)->cond197
+cond197(yes)->sub201
+sub201->e214
+cond197(no)->sub205
+sub205->sub207
+sub207->e214
+cond122(no)->sub132
+sub132->sub134
+sub134->e137
+cond29(no)->cond40
+cond40(yes)->sub44
+sub44->sub46
+sub46->e102
+cond40(no)->cond51
+cond51(yes)->sub55
+sub55->sub57
+sub57->op59
+op59->cond62
+cond62(yes)->sub66
+sub66->e102
+cond62(no)->cond71
+cond71(yes)->sub75
+sub75->e102
+cond71(no)->sub79
+sub79->e102
+cond51(no)->cond86
+cond86(yes)->sub90
+sub90->e102
+cond86(no)->sub94
+sub94->sub96
+sub96->e102
+</textarea></div>
+        <div><button id="run" type="button">Run</button> <button onclick="HelpText()">Format Help</button></div>
+        <div id="HelpTextBlock" style="display:none"><br/>Conditions can also be redirected like cond(yes, bottom) or cond(yes, right)
+... and the other symbols too... like sub1(right)<br/>
+You can also tweak the <b>diagram.drawSVG('diagram', {});</b> script in this file for more changes<br/>
+This is based on <a href="https://github.com/adrai/flowchart.js">flowchart.js on github</a> and <a href="http://flowchart.js.org">http://flowchart.js.org</a> more documentation can be found over there.
+</div><br/><div id="svgbase64"></div>
+        <div id="pngbase64"></div>
+
+        <div id="canvas"></div>
+    </body>
+</html>

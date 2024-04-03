@@ -1,0 +1,3 @@
+Huzaifa Nafiz, 10221190, 1234, Savings Account, 200.0
+Ahin Chanda, 89613840, 1234, Current Account, 600.0
+Rudra Kumar, 87674472, 3333, Savings Account, 100
